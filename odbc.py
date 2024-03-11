@@ -1,0 +1,377 @@
+import pyodbc
+import pickle
+import os
+import uuid
+from dotenv import load_dotenv
+
+# Carrega as variáveis de ambiente do arquivo .env
+load_dotenv()
+
+server = os.getenv('DB_SERVER')
+database = os.getenv('DB_NAME')
+username = os.getenv('DB_USERNAME')
+password = os.getenv('DB_PASSWORD')
+
+conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+
+
+
+def ConsultaUsuario(UserId=None):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+
+        if UserId is not None:
+            # Se UserId fornecido, busca Id, usuário e PassSal
+            query = f"""
+                SELECT Id, Usuario, Pass, PassSal
+                FROM Usuarios 
+                WHERE Ativo = 1 AND Id = '{UserId}'
+            """
+        else:
+            # Se UserId não fornecido, busca todos Id e usuários
+            query = """
+                SELECT Id, Usuario
+                FROM Usuarios 
+                WHERE Ativo = 1
+            """
+
+        cursor.execute(query)
+        result = cursor.fetchall()
+
+        if result:
+            return result
+        else:
+            print(f"Nenhum usuário encontrado")
+            return None
+
+    except Exception as e:
+        print(f"Erro ao consultar Usuario: {e}")
+        return None
+
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+def createUser(user, password, sal):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+        id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO Usuarios (Id, Usuario, Pass, DataAlteracao, Ativo, PassSal)
+            VALUES (?, ?, ?, GETDATE(), 1, ?)
+            """,
+            (id, user, password, sal)
+        )
+
+        # Commit para salvar as alterações
+        connection.commit()
+
+        print(f"Registro inserido com sucesso na tabela Usuario.")
+
+        return id
+    
+    except Exception as e:
+        print(f"Erro ao inserir registro na tabela Usuario: {e}")
+
+    finally:
+        # Certifique-se de fechar a conexão quando terminar
+        if 'connection' in locals():
+            connection.close()
+
+
+def atualizaPdf(pdfImportacaoId, pdfBlob):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+
+        print("Conexão bem-sucedida!")
+
+        # Atualizar o campo Ativo nas faces relacionadas ao pdfImportacaoId
+        cursor.execute("""
+            UPDATE PdfImportacao
+            SET Pdf = ?, DataAlteracao = GETDATE()
+            WHERE Id = ?
+            """,
+            (pdfBlob, pdfImportacaoId)
+        )
+
+        connection.commit()
+
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {e}")
+
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+def InsertPdfImportacao(pdfBlob, nome_arquivo):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+        idPdfImportacao = uuid.uuid4()
+        cursor.execute("""
+            INSERT INTO PdfImportacao (Id, Pdf, Codigo, DataAlteracao, Ativo, NomeArquivo)
+            VALUES (?, ?, NULL, GETDATE(), 1, ?)
+            """,
+            (idPdfImportacao, pdfBlob, nome_arquivo)
+        )
+
+        # Commit para salvar as alterações
+        connection.commit()
+
+        print(f"Registro inserido com sucesso na tabela PdfImportacao.")
+
+        return idPdfImportacao
+    
+    except Exception as e:
+        print(f"Erro ao inserir registro na tabela PdfImportacao: {e}")
+
+    finally:
+        # Certifique-se de fechar a conexão quando terminar
+        if 'connection' in locals():
+            connection.close()
+
+
+def ConsultaPdf(pdfId):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+    
+        cursor.execute("""
+            SELECT Pdf
+            FROM PdfImportacao
+            WHERE  Id = ?
+            """,
+            (pdfId,)
+        )
+
+        result = cursor.fetchone()
+
+        if result:
+
+            return result.Pdf
+        else:
+            print(f"Nenhum PDF encontrado com o ID {pdfId}")
+            return None
+
+    except Exception as e:
+        print(f"Erro ao consultar PDF: {e}")
+        return None
+
+    finally:
+
+        if 'connection' in locals():
+            connection.close()
+
+
+
+def InsertFaces(pdfImportacaoId, faces_on_all_pages):
+
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+        
+        print("Conexão bem-sucedida!")
+        faces_on_all_pages_cleaned = [faces for faces in faces_on_all_pages if any(faces)]
+
+        for faces_on_page in enumerate(faces_on_all_pages_cleaned):
+            for face in faces_on_page[1]:
+
+                cursor.execute("""
+                    INSERT INTO Faces (Codigo, Encode, NumeroPagina, Localizacao, DataAlteracao, Ativo, pdfImportacaoId)
+                    VALUES (?, ?, ?, ?, GETDATE(), 1, ?)
+                    """,
+                    (str(uuid.uuid4()), face['encode'], face['numero_pagina'], str(face['localizacao']), pdfImportacaoId)
+                )
+
+        connection.commit()
+
+
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {e}")
+
+    finally:
+
+        if 'connection' in locals():
+            connection.close()
+
+def DeleteFaces(pdfImportacaoId):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+
+        print("Conexão bem-sucedida!")
+
+        # Atualizar o campo Ativo nas faces relacionadas ao pdfImportacaoId
+        cursor.execute("""
+            UPDATE Faces
+            SET Ativo = ?
+            WHERE pdfImportacaoId = ?
+            """,
+            (False, pdfImportacaoId)
+        )
+
+        connection.commit()
+
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {e}")
+
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+
+def PesquisaPath(IdImportacao):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT PathPdf 
+            FROM PdfImportacao
+            WHERE Id = ?
+            """,
+            (IdImportacao)
+        )
+
+        result = cursor.fetchone()
+
+        if result:
+
+            return result.PathPdf
+        else:
+            print(f"Nenhum Path encontrado com o ID {IdImportacao}")
+            return None
+
+    except Exception as e:
+        print(f"Erro ao consultar PDF: {e}")
+        return None
+
+    finally:
+
+        if 'connection' in locals():
+            connection.close()
+
+def AtualizaPath(IdImportacao, path):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            UPDATE PdfImportacao
+            SET PathPdf = ?
+            WHERE Id = ?
+            """,
+            (path, IdImportacao)
+        )
+
+        connection.commit()
+
+    except Exception as e:
+        print(f"Erro ao conectar ao banco de dados: {e}")
+
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+
+def ConsultaImportacaoPdfAtivos(id=None):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+
+        query = """
+            SELECT Id, Codigo, DataAlteracao, NomeArquivo, PathPdf
+            FROM PdfImportacao 
+            WHERE Ativo = 1
+        """
+
+        if id is not None:
+            query += f" AND Id = {id}"
+
+        cursor.execute(query)
+
+        result = cursor.fetchall()
+
+        if result:
+            return result
+        else:
+            print(f"Nenhum PDF encontrado com o ID {id}")
+            return None
+
+    except Exception as e:
+        print(f"Erro ao consultar PDF: {e}")
+        return None
+
+    finally:
+        if 'connection' in locals():
+            connection.close()
+
+def ExcluirImportacaoPdf(pdfId):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+        print("Conexão bem-sucedida!")
+
+        cursor.execute("""
+            UPDATE PdfImportacao
+            SET Ativo = 0
+            WHERE Ativo = 1 and Id = ?
+            """,
+            (pdfId)
+        )
+        connection.commit()
+
+        return
+
+    except Exception as e:
+        print(f"Erro ao Excluir PDF: {e}")
+        return None
+
+    finally:
+
+        if 'connection' in locals():
+            connection.close()
+
+
+def SelectAllFaces(importacaoId):
+    try:
+        connection = pyodbc.connect(conn_str)
+        cursor = connection.cursor()
+        face_encoding_recuperado = []
+
+        cursor.execute("""
+            SELECT encode, NumeroPagina
+            FROM Faces
+            WHERE Ativo = 1 and pdfImportacaoId = ?
+            """,
+            (importacaoId)
+        )
+
+        result = cursor.fetchall()
+
+        for row in result:
+            # Suponha que 'face_encoding' seja o nome da coluna que armazena os bytes do código da face
+            bytes_do_banco = row.encode 
+
+            # Desserialize os bytes para obter o código da face original
+            face_encoding_recuperado.append((pickle.loads(bytes_do_banco), row.NumeroPagina))
+
+        if face_encoding_recuperado:
+
+            return face_encoding_recuperado
+        
+        else:
+            print(f"Nenhuma face encontrada")
+            return None
+
+    except Exception as e:
+        print(f"Erro ao consultar face: {e}")
+        return None
+
+    finally:
+
+        if 'connection' in locals():
+            connection.close()

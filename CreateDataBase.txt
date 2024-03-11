@@ -1,0 +1,35 @@
+-- Criar o banco de dados
+CREATE DATABASE PesquisaFace;
+USE PesquisaFace;
+
+-- Criar a tabela Faces
+CREATE TABLE Faces (
+    Codigo UNIQUEIDENTIFIER PRIMARY KEY,
+    Encode VARBINARY(MAX),
+    NumeroPagina INT,
+    Localizacao VARCHAR(MAX),
+    pdfImportacaoId UNIQUEIDENTIFIER,
+    FOREIGN KEY (pdfImportacaoId) REFERENCES PdfImportacao(Id),
+    DataAlteracao DATETIME,
+    Ativo BIT
+);
+
+
+-- Criar a tabela PdfImportacao
+CREATE TABLE PdfImportacao (
+    Id UNIQUEIDENTIFIER PRIMARY KEY,
+    Pdf VARBINARY(MAX),
+    Codigo INT,
+    DataAlteracao DATETIME,
+    Ativo BIT,
+    NomeArquivo VARCHAR(MAX)
+);
+
+CREATE TABLE Usuarios(
+    Id UNIQUEIDENTIFIER PRIMARY KEY,
+    Usuario VARCHAR(MAX),
+    Pass VARCHAR(MAX),
+    DataAlteracao DATETIME,
+    Ativo BIT
+    PassSal VARCHAR(MAX)
+);
