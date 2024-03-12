@@ -1,6 +1,0 @@
-{
-    "options": {
-        "logging": "NONE",
-        "defaultLogsBucketBehavior": "DEFAULT_LOGS_BUCKET_BEHAVIOR_UNSPECIFIED"
-    }
-}
