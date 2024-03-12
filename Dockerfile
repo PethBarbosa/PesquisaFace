@@ -33,7 +33,7 @@ WORKDIR /app
 COPY . .
 
 # Instale as dependências do seu projeto (se houver)
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Exponha a porta 5000 para permitir conexões externas
 EXPOSE 5000
