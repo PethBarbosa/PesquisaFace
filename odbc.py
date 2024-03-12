@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
-server = os.getenv('DB_SERVER')
-database = os.getenv('DB_NAME')
-username = os.getenv('DB_USERNAME')
-password = os.getenv('DB_PASSWORD')
+server = 'database-pesquisaface.czyg2wioga62.us-east-2.rds.amazonaws.com'
+database = 'PesquisaFace'
+username = 'adminPath'
+password = '!PesquisaFace1232016!'
 
 conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
 
