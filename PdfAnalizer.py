@@ -17,8 +17,8 @@ def criaUsuario(user, password, sal):
     usuarioId = odbc.createUser(user, password, sal)
     return usuarioId
 
-def atualizarpdf(idPdf, pdfBytes):
-    odbc.atualizaPdf(idPdf, pdfBytes)
+def atualizarpdf(idPdf):
+    odbc.atualizaDataAlteracaoPdf(idPdf)
     return
 
 
@@ -34,8 +34,6 @@ def ExcluirPdfImportacaoPdf(pdfId):
 
 def InsertPdfImportacao(nome_arquivo):
     IdPdf = odbc.InsertPdfImportacao(nome_arquivo)
-    ProcessarPdf(IdPdf)
-
     return IdPdf
 
 def ConsultaImportacaoAtivos(id=None):
@@ -60,7 +58,7 @@ def ProcessarPdf(pdfId):
 
         NomeArquivo = ConsultaPdf(pdfId)
         
-        caminho_arquivo = os.path.join('pdfs', NomeArquivo)
+        caminho_arquivo = os.path.join('Pdfs', NomeArquivo)
 
         with open(caminho_arquivo, 'rb') as arquivo_pdf:
             blob_Pdfdata = arquivo_pdf.read()
@@ -82,6 +80,7 @@ def ProcessarPdf(pdfId):
         pdf.close()
         odbc.DeleteFaces(pdfId)
         odbc.InsertFaces(pdfId, faces_on_all_pages)
+        atualizarpdf(pdfId)
         
         print(f"PDF processado !")
 

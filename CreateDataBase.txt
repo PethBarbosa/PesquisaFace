@@ -14,7 +14,6 @@ CREATE TABLE Faces (
     Ativo BIT
 );
 
-
 -- Criar a tabela PdfImportacao
 CREATE TABLE PdfImportacao (
     Id UNIQUEIDENTIFIER PRIMARY KEY,
@@ -22,7 +21,8 @@ CREATE TABLE PdfImportacao (
     Codigo INT,
     DataAlteracao DATETIME,
     Ativo BIT,
-    NomeArquivo VARCHAR(MAX)
+    NomeArquivo VARCHAR(MAX),
+    PathPdf VARCHAR(MAX)
 );
 
 CREATE TABLE Usuarios(

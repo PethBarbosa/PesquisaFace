@@ -1,8 +1,10 @@
+import datetime
 import pyodbc
 import pickle
 import os
 import uuid
 from dotenv import load_dotenv
+import pytz
 
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -11,9 +13,17 @@ server = 'database-pesquisaface.czyg2wioga62.us-east-2.rds.amazonaws.com'
 database = 'PesquisaFace'
 username = 'adminPath'
 password = '!PesquisaFace1232016!'
-conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={server};DATABASE={database};UID={username};PWD={password}'
+conn_str = f'DRIVER=ODBC Driver 17 for SQL Server;SERVER={server};DATABASE={database};UID={username};PWD={password}'
 
 
+def get_local_time():
+
+    tz = pytz.timezone('America/Sao_Paulo')  # Substitua 'America/Sao_Paulo' pelo fuso horário desejado
+    now_utc = datetime.utcnow()
+    now_local = now_utc.astimezone(tz)
+    formatted_time = now_local.strftime('%d-%m-%Y %H:%M')
+
+    return formatted_time
 
 def ConsultaUsuario(UserId=None):
     try:
@@ -57,11 +67,13 @@ def createUser(user, password, sal):
         connection = pyodbc.connect(conn_str)
         cursor = connection.cursor()
         id = str(uuid.uuid4())
+        data_alteracao = get_local_time()
+
         cursor.execute("""
             INSERT INTO Usuarios (Id, Usuario, Pass, DataAlteracao, Ativo, PassSal)
-            VALUES (?, ?, ?, GETDATE(), 1, ?)
+            VALUES (?, ?, ?, ?, 1, ?)
             """,
-            (id, user, password, sal)
+            (id, user, password,data_alteracao, sal)
         )
 
         # Commit para salvar as alterações
@@ -80,20 +92,21 @@ def createUser(user, password, sal):
             connection.close()
 
 
-def atualizaPdf(pdfImportacaoId, pdfBlob):
+def atualizaDataAlteracaoPdf(pdfImportacaoId):
     try:
         connection = pyodbc.connect(conn_str)
         cursor = connection.cursor()
+        data_alteracao = get_local_time()
 
         print("Conexão bem-sucedida!")
 
         # Atualizar o campo Ativo nas faces relacionadas ao pdfImportacaoId
         cursor.execute("""
             UPDATE PdfImportacao
-            SET Pdf = ?, DataAlteracao = GETDATE()
+            SET DataAlteracao = ?
             WHERE Id = ?
             """,
-            (pdfBlob, pdfImportacaoId)
+            (data_alteracao, pdfImportacaoId)
         )
 
         connection.commit()
@@ -110,11 +123,13 @@ def InsertPdfImportacao(nome_arquivo):
         connection = pyodbc.connect(conn_str)
         cursor = connection.cursor()
         idPdfImportacao = uuid.uuid4()
+        data_alteracao = get_local_time()
+
         cursor.execute("""
             INSERT INTO PdfImportacao (Id, Codigo, DataAlteracao, Ativo, NomeArquivo)
-            VALUES (?, NULL, GETDATE(), 1, ?)
+            VALUES (?, NULL, ?, 1, ?)
             """,
-            (idPdfImportacao, nome_arquivo)
+            (idPdfImportacao,data_alteracao, nome_arquivo)
         )
 
         # Commit para salvar as alterações
@@ -171,7 +186,8 @@ def InsertFaces(pdfImportacaoId, faces_on_all_pages):
     try:
         connection = pyodbc.connect(conn_str)
         cursor = connection.cursor()
-        
+        data_alteracao = get_local_time()
+
         print("Conexão bem-sucedida!")
         faces_on_all_pages_cleaned = [faces for faces in faces_on_all_pages if any(faces)]
 
@@ -180,9 +196,9 @@ def InsertFaces(pdfImportacaoId, faces_on_all_pages):
 
                 cursor.execute("""
                     INSERT INTO Faces (Codigo, Encode, NumeroPagina, Localizacao, DataAlteracao, Ativo, pdfImportacaoId)
-                    VALUES (?, ?, ?, ?, GETDATE(), 1, ?)
+                    VALUES (?, ?, ?, ?, ?, 1, ?)
                     """,
-                    (str(uuid.uuid4()), face['encode'], face['numero_pagina'], str(face['localizacao']), pdfImportacaoId)
+                    (str(uuid.uuid4()), face['encode'], face['numero_pagina'], str(face['localizacao']), data_alteracao, pdfImportacaoId)
                 )
 
         connection.commit()
@@ -282,7 +298,7 @@ def ConsultaImportacaoPdfAtivos(id=None):
         cursor = connection.cursor()
 
         query = """
-            SELECT Id, Codigo, DataAlteracao, NomeArquivo
+            SELECT Id, Codigo, DataAlteracao, NomeArquivo, PathPdf
             FROM PdfImportacao 
             WHERE Ativo = 1
         """
