@@ -1,4 +1,5 @@
 import io
+import os
 import cv2
 import face_recognition
 from PIL import Image
@@ -31,8 +32,8 @@ def ExcluirPdfImportacaoPdf(pdfId):
     odbc.DeleteFaces(pdfId)
     return
 
-def InsertPdfImportacao(pdfBytes, nome_arquivo):
-    IdPdf = odbc.InsertPdfImportacao(pdfBytes, nome_arquivo)
+def InsertPdfImportacao(nome_arquivo):
+    IdPdf = odbc.InsertPdfImportacao(nome_arquivo)
     ProcessarPdf(IdPdf)
 
     return IdPdf
@@ -48,19 +49,25 @@ def AtualizaPath(id, path):
 
 def ConsultaPdf(pdfId):
     
-    blob_Pdfdata = odbc.ConsultaPdf(pdfId)
+    NomeArquivo = odbc.ConsultaPdf(pdfId)
     
-    return blob_Pdfdata
+    return NomeArquivo
 
 def ProcessarPdf(pdfId):
 
     try:
         faces_on_all_pages = []
 
-        blob_Pdfdata = ConsultaPdf(pdfId)
+        NomeArquivo = ConsultaPdf(pdfId)
+        
+        caminho_arquivo = os.path.join('pdfs', NomeArquivo)
 
+        with open(caminho_arquivo, 'rb') as arquivo_pdf:
+            blob_Pdfdata = arquivo_pdf.read()
+
+        # Carregar o PDF em memória apenas para leitura dos blobs
         pdf = fitz.open(stream=blob_Pdfdata, filetype="pdf")
-
+        
         for page_number in range(1, pdf.page_count - 1):
             
             try:
@@ -71,7 +78,8 @@ def ProcessarPdf(pdfId):
             except Exception as e:
                 print(f"Erro ao processar página {page_number}: {e}")
                 pass
-
+            
+        pdf.close()
         odbc.DeleteFaces(pdfId)
         odbc.InsertFaces(pdfId, faces_on_all_pages)
         

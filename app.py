@@ -1,12 +1,16 @@
+import io
+import os
 from flask_cors import CORS, cross_origin
 from flask import Flask, jsonify, send_file
 from PdfAnalizer import consultarUsuario, criaUsuario, ConsultaImportacaoAtivos, ConsultaPdf, InsertPdfImportacao, ExcluirPdfImportacaoPdf, EncodeImage, AtualizaPath, PesquisaPath, atualizarpdf, ProcessarPdf
 import datetime 
-import fitz  # PyMuPDF
+import fitz
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask import Flask, jsonify, request
 import requests
 import bcrypt
+from werkzeug.utils import secure_filename
+
 
 
 app = Flask(__name__)
@@ -75,14 +79,10 @@ def login():
     else:
         id_correspondente = next((id_usuario for id_usuario, usuario in users if usuario == username), None)
         userLogin = consultarUsuario(id_correspondente)
-        # Combine o sal recuperado com a senha fornecida pelo usuário
-
+        
         senha_com_sal = password + userLogin[0][3]
-
-        # Aplique a função de hash (bcrypt) a essa combinação
         novo_hash = bcrypt.hashpw(senha_com_sal.encode('utf-8'), userLogin[0][3].encode('utf-8'))
-
-        # Compare o novo hash gerado com o hash armazenado no banco de dados
+        
         if novo_hash.decode('utf-8') == userLogin[0][2]:
             print("Senha correta! Login bem-sucedido.")
             access_token = create_access_token(identity=username)
@@ -168,14 +168,13 @@ def excluirImportacao(PdfId):
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
+ 
 
 @app.route('/pdfimportacao', methods=['POST'])
 @cross_origin()
 @jwt_required()
 def inserirImportacao():
     try:
-
         if 'file' not in request.files:
             return jsonify({'error': 'Nenhum arquivo PDF enviado'}), 400
 
@@ -184,11 +183,12 @@ def inserirImportacao():
         if file.filename == '':
             return jsonify({'error': 'Nome de arquivo inválido'}), 400
 
-        pdf_bytes = file.read()
+        # Salvar o arquivo localmente
+        nome_arquivo = secure_filename(file.filename)
+        caminho_arquivo_original = os.path.join('Pdfs', nome_arquivo)
+        file.save(caminho_arquivo_original)
 
-        nome_arquivo = file.filename
-
-        IdPdfInsert = InsertPdfImportacao(pdf_bytes, nome_arquivo)
+        IdPdfInsert = InsertPdfImportacao(nome_arquivo)
 
         if IdPdfInsert:
             return jsonify({'message': 'Importação de PDF bem-sucedida', 'ImportacaoId': IdPdfInsert})
@@ -197,7 +197,8 @@ def inserirImportacao():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    
+
+
 @app.route('/list/pdfimportacao/configuracao/<PdfId>', methods=['GET'])
 @cross_origin()
 @jwt_required()
@@ -256,36 +257,27 @@ def enviarImagem(importacaoId):
 @cross_origin()
 @jwt_required()
 def download_pdf(pdf_id, pagina):
-    # Obtém os bytes do PDF
-    bytes_do_pdf = ConsultaPdf(pdf_id)
+    # Obtém o nome do arquivo PDF com base no ID
+    nome_arquivo = ConsultaPdf(pdf_id)
+    caminho_arquivo = os.path.join('Pdfs', nome_arquivo)
 
-    if bytes_do_pdf:
-        # Abre o PDF usando o PyMuPDF
-        pdf_document = fitz.open(stream=io.BytesIO(bytes_do_pdf))
+    if os.path.exists(caminho_arquivo):
+        with fitz.open(caminho_arquivo) as pdf_document:
+            pagina_pdf = pdf_document.load_page(pagina - 1)  # A contagem de páginas começa em 0
 
-        # Obtém a página desejada
-        pagina_pdf = pdf_document.load_page(pagina - 1)  # A contagem de páginas começa em 0
+            novo_pdf = fitz.open()
+            novo_pdf.insert_pdf(pdf_document, from_page=pagina - 1, to_page=pagina - 1)
 
-        # Converte a página para um novo documento PDF
-        novo_pdf = fitz.open()
-        novo_pdf.insert_pdf(pdf_document, from_page=pagina - 1, to_page=pagina - 1)
-
-        # Converte o novo documento PDF para bytes
-        bytes_do_novo_pdf = novo_pdf.write()
-        
-        # Fecha ambos os documentos PDF
-        pdf_document.close()
-        novo_pdf.close()
-
-        # Envia os bytes do novo documento PDF como resposta para a solicitação HTTP
-        return send_file(
-            io.BytesIO(bytes_do_novo_pdf),
-            mimetype='application/pdf',
-            as_attachment=True,
-            download_name=f'pdf_{pdf_id}_pagina_{pagina}.pdf'
-        )
+            bytes_do_novo_pdf = novo_pdf.write()
+            
+            return send_file(
+                io.BytesIO(bytes_do_novo_pdf),
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'pdf_{pdf_id}_pagina_{pagina}.pdf'
+            )
     else:
         return "PDF não encontrado", 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    app.run(host='0.0.0.0', port=5000, debug=True) 

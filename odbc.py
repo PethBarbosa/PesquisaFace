@@ -105,16 +105,16 @@ def atualizaPdf(pdfImportacaoId, pdfBlob):
         if 'connection' in locals():
             connection.close()
 
-def InsertPdfImportacao(pdfBlob, nome_arquivo):
+def InsertPdfImportacao(nome_arquivo):
     try:
         connection = pyodbc.connect(conn_str)
         cursor = connection.cursor()
         idPdfImportacao = uuid.uuid4()
         cursor.execute("""
-            INSERT INTO PdfImportacao (Id, Pdf, Codigo, DataAlteracao, Ativo, NomeArquivo)
-            VALUES (?, ?, NULL, GETDATE(), 1, ?)
+            INSERT INTO PdfImportacao (Id, Codigo, DataAlteracao, Ativo, NomeArquivo)
+            VALUES (?, NULL, GETDATE(), 1, ?)
             """,
-            (idPdfImportacao, pdfBlob, nome_arquivo)
+            (idPdfImportacao, nome_arquivo)
         )
 
         # Commit para salvar as alterações
@@ -139,7 +139,7 @@ def ConsultaPdf(pdfId):
         cursor = connection.cursor()
     
         cursor.execute("""
-            SELECT Pdf
+            SELECT NomeArquivo
             FROM PdfImportacao
             WHERE  Id = ?
             """,
@@ -150,7 +150,7 @@ def ConsultaPdf(pdfId):
 
         if result:
 
-            return result.Pdf
+            return result.NomeArquivo
         else:
             print(f"Nenhum PDF encontrado com o ID {pdfId}")
             return None
@@ -282,7 +282,7 @@ def ConsultaImportacaoPdfAtivos(id=None):
         cursor = connection.cursor()
 
         query = """
-            SELECT Id, Codigo, DataAlteracao, NomeArquivo, PathPdf
+            SELECT Id, Codigo, DataAlteracao, NomeArquivo
             FROM PdfImportacao 
             WHERE Ativo = 1
         """

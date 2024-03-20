@@ -1,7 +1,0 @@
-steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'us-central1-docker.pkg.dev/sage-tribute-409320/cloud-run-source-deploy/pesquisaface-image', '.']
-options:
-  build:
-    service_account: '1058658677167-compute@developer.gserviceaccount.com'
-    logs_bucket: 'gs://your-logs-bucket'
