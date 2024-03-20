@@ -7,8 +7,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from flask import Flask, jsonify, request
 import requests
 import bcrypt
-import os
-import ssl
+
 
 app = Flask(__name__)
 CORS(app)
@@ -18,6 +17,10 @@ CORS(app)
 app.config['JWT_SECRET_KEY'] = 'sua-chave-secreta'
 jwt = JWTManager(app)
 
+# Certificado SSL e chave privada
+ssl_context = SSL.Context(SSL.SSLv23_METHOD)
+ssl_context.use_privatekey_file('')
+ssl_context.use_certificate_file('/path/to/your/certificate.pem')
 
 @app.route('/Usuario', methods=['POST'])
 def cadastrar_usuario():
@@ -289,4 +292,4 @@ def download_pdf(pdf_id, pagina):
         return "PDF não encontrado", 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000) 
+    app.run(host='0.0.0.0', port=443) 
