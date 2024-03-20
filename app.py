@@ -244,6 +244,8 @@ def obterPdf():
         if resultados:
             resultados_list_of_dicts = rows_to_list_of_dicts(resultados)
             return jsonify(resultados_list_of_dicts), 200
+
+        return jsonify({"Retorno:":"Não existem registros ativos"}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
