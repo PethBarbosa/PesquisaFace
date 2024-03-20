@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 import pyodbc
 import pickle
 import os
@@ -18,12 +18,12 @@ conn_str = f'DRIVER=ODBC Driver 17 for SQL Server;SERVER={server};DATABASE={data
 
 def get_local_time():
 
-    tz = pytz.timezone('America/Sao_Paulo')  # Substitua 'America/Sao_Paulo' pelo fuso horário desejado
+    tz = pytz.timezone('America/Sao_Paulo')
     now_utc = datetime.utcnow()
     now_local = now_utc.astimezone(tz)
-    formatted_time = now_local.strftime('%d-%m-%Y %H:%M')
+    formatted_time = now_local.strftime('%Y-%m-%d %H:%M') 
 
-    return formatted_time
+    return str(formatted_time)
 
 def ConsultaUsuario(UserId=None):
     try:
@@ -129,7 +129,7 @@ def InsertPdfImportacao(nome_arquivo):
             INSERT INTO PdfImportacao (Id, Codigo, DataAlteracao, Ativo, NomeArquivo)
             VALUES (?, NULL, ?, 1, ?)
             """,
-            (idPdfImportacao,data_alteracao, nome_arquivo)
+            (idPdfImportacao, data_alteracao, nome_arquivo)
         )
 
         # Commit para salvar as alterações
