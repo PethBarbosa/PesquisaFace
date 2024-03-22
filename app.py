@@ -287,7 +287,7 @@ def download_pdf(pdf_id, pagina):
             return send_file(
                 io.BytesIO(bytes_do_novo_pdf),
                 mimetype='application/pdf',
-                as_attachment=True,
+                as_attachment=False,
                 download_name=f'pdf_{pdf_id}_pagina_{pagina}.pdf'
             )
     else:
