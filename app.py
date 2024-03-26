@@ -1,7 +1,6 @@
 import io
 import os
 import threading
-from tkinter import Image
 from flask_cors import CORS, cross_origin
 from flask import Flask, jsonify, send_file
 from PdfAnalizer import consultarUsuario, criaUsuario, ConsultaImportacaoAtivos, ConsultaPdf, InsertPdfImportacao, ExcluirPdfImportacaoPdf, EncodeImage, AtualizaPath, PesquisaPath, atualizarpdf, ProcessarPdf
@@ -272,23 +271,24 @@ def enviarImagem(importacaoId):
 @cross_origin()
 @jwt_required()
 def download_image(pdf_id, pagina):
-
     nome_arquivo = ConsultaPdf(pdf_id)
     caminho_arquivo = os.path.join('Pdfs', nome_arquivo)
 
     if os.path.exists(caminho_arquivo):
         with fitz.open(caminho_arquivo) as pdf_document:
-            pagina_pdf = pdf_document.load_page(pagina - 1)  
+            pagina_pdf = pdf_document.load_page(pagina - 1)
             
-            imagem = pagina_pdf.get_pixmap(alpha=False)
-            img_pil = Image.frombytes("RGB", [imagem.width, imagem.height], imagem.samples)
-            
-            img_io = io.BytesIO()
-            img_pil.save(img_io, format='PNG')
-            img_io.seek(0)
+            # Convertendo a página PDF em uma imagem
+            imagem_bytes = pagina_pdf.get_pixmap(alpha=False).samples
 
+            # Salvando os bytes da imagem em um arquivo temporário
+            imagem_temporaria = f'/tmp/pdf_{pdf_id}_pagina_{pagina}.png'
+            with open(imagem_temporaria, 'wb') as file:
+                file.write(imagem_bytes)
+            
+            # Enviando a imagem como resposta
             return send_file(
-                img_io,
+                imagem_temporaria,
                 mimetype='image/png',
                 as_attachment=False,
                 download_name=f'pdf_{pdf_id}_pagina_{pagina}.png'
