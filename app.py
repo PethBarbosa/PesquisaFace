@@ -1,6 +1,7 @@
 import io
 import os
 import threading
+from tkinter import Image
 from flask_cors import CORS, cross_origin
 from flask import Flask, jsonify, send_file
 from PdfAnalizer import consultarUsuario, criaUsuario, ConsultaImportacaoAtivos, ConsultaPdf, InsertPdfImportacao, ExcluirPdfImportacaoPdf, EncodeImage, AtualizaPath, PesquisaPath, atualizarpdf, ProcessarPdf
@@ -267,28 +268,30 @@ def enviarImagem(importacaoId):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-@app.route('/download_pdf/<pdf_id>/<int:pagina>')
+@app.route('/download_image/<pdf_id>/<int:pagina>')
 @cross_origin()
 @jwt_required()
-def download_pdf(pdf_id, pagina):
-    # Obtém o nome do arquivo PDF com base no ID
+def download_image(pdf_id, pagina):
+
     nome_arquivo = ConsultaPdf(pdf_id)
     caminho_arquivo = os.path.join('Pdfs', nome_arquivo)
 
     if os.path.exists(caminho_arquivo):
         with fitz.open(caminho_arquivo) as pdf_document:
-            pagina_pdf = pdf_document.load_page(pagina - 1)  # A contagem de páginas começa em 0
-
-            novo_pdf = fitz.open()
-            novo_pdf.insert_pdf(pdf_document, from_page=pagina - 1, to_page=pagina - 1)
-
-            bytes_do_novo_pdf = novo_pdf.write()
+            pagina_pdf = pdf_document.load_page(pagina - 1)  
             
+            imagem = pagina_pdf.get_pixmap(alpha=False)
+            img_pil = Image.frombytes("RGB", [imagem.width, imagem.height], imagem.samples)
+            
+            img_io = io.BytesIO()
+            img_pil.save(img_io, format='PNG')
+            img_io.seek(0)
+
             return send_file(
-                io.BytesIO(bytes_do_novo_pdf),
-                mimetype='application/pdf',
+                img_io,
+                mimetype='image/png',
                 as_attachment=False,
-                download_name=f'pdf_{pdf_id}_pagina_{pagina}.pdf'
+                download_name=f'pdf_{pdf_id}_pagina_{pagina}.png'
             )
     else:
         return "PDF não encontrado", 200
