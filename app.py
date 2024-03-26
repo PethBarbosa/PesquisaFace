@@ -1,4 +1,4 @@
-from io import BytesIO
+import io
 import os
 import threading
 from flask_cors import CORS, cross_origin
@@ -267,26 +267,25 @@ def enviarImagem(importacaoId):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-@app.route('/download_image/<pdf_id>/<int:pagina>')
+@app.route('/download_pdf/<pdf_id>/<int:pagina>')
 @cross_origin()
 @jwt_required()
-def download_image(pdf_id, pagina):
+def download_pdf(pdf_id, pagina):
+
     nome_arquivo = ConsultaPdf(pdf_id)
     caminho_arquivo = os.path.join('Pdfs', nome_arquivo)
-
     if os.path.exists(caminho_arquivo):
         with fitz.open(caminho_arquivo) as pdf_document:
-            pagina_pdf = pdf_document.load_page(pagina - 1)
+            pagina_pdf = pdf_document.load_page(pagina - 1)  
+            novo_pdf = fitz.open()
+            novo_pdf.insert_pdf(pdf_document, from_page=pagina - 1, to_page=pagina - 1)
+            bytes_do_novo_pdf = novo_pdf.write()
             
-            # Convertendo a página PDF em uma imagem
-            imagem_bytes = pagina_pdf.get_pixmap(alpha=False).samples
-            
-            # Enviando a imagem como resposta
             return send_file(
-                BytesIO(imagem_bytes),
-                mimetype='image/png',
-                as_attachment=False,
-                download_name=f'pdf_{pdf_id}_pagina_{pagina}.png'
+                io.BytesIO(bytes_do_novo_pdf),
+                mimetype='application/pdf',
+                as_attachment=True,
+                download_name=f'pdf_{pdf_id}_pagina_{pagina}.pdf'
             )
     else:
         return "PDF não encontrado", 200
