@@ -1,4 +1,4 @@
-import io
+from io import BytesIO
 import os
 import threading
 from flask_cors import CORS, cross_origin
@@ -280,15 +280,10 @@ def download_image(pdf_id, pagina):
             
             # Convertendo a página PDF em uma imagem
             imagem_bytes = pagina_pdf.get_pixmap(alpha=False).samples
-
-            # Salvando os bytes da imagem em um arquivo temporário
-            imagem_temporaria = f'/tmp/pdf_{pdf_id}_pagina_{pagina}.png'
-            with open(imagem_temporaria, 'wb') as file:
-                file.write(imagem_bytes)
             
             # Enviando a imagem como resposta
             return send_file(
-                imagem_temporaria,
+                BytesIO(imagem_bytes),
                 mimetype='image/png',
                 as_attachment=False,
                 download_name=f'pdf_{pdf_id}_pagina_{pagina}.png'
