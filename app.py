@@ -11,6 +11,7 @@ from flask import Flask, jsonify, request
 import requests
 import bcrypt
 from werkzeug.utils import secure_filename
+from PIL import Image
 
 
 
@@ -271,12 +272,12 @@ def enviarImagem(importacaoId):
 @cross_origin()
 @jwt_required()
 def download_pdf(pdf_id, pagina):
-
+    # Obtém o nome do arquivo PDF com base no ID
     nome_arquivo = ConsultaPdf(pdf_id)
     caminho_arquivo = os.path.join('Pdfs', nome_arquivo)
     if os.path.exists(caminho_arquivo):
         with fitz.open(caminho_arquivo) as pdf_document:
-            pagina_pdf = pdf_document.load_page(pagina - 1)  
+            pagina_pdf = pdf_document.load_page(pagina - 1)  # A contagem de páginas começa em 0
             novo_pdf = fitz.open()
             novo_pdf.insert_pdf(pdf_document, from_page=pagina - 1, to_page=pagina - 1)
             bytes_do_novo_pdf = novo_pdf.write()
@@ -289,6 +290,37 @@ def download_pdf(pdf_id, pagina):
             )
     else:
         return "PDF não encontrado", 200
+    
+
+@app.route('/download_imagem/<pdf_id>/<int:pagina>')
+@cross_origin()
+@jwt_required()
+def download_imagem(pdf_id, pagina):
+    # Obtém o nome do arquivo PDF com base no ID
+    nome_arquivo = ConsultaPdf(pdf_id)
+    caminho_arquivo = os.path.join('Pdfs', nome_arquivo)
+    if os.path.exists(caminho_arquivo):
+        with fitz.open(caminho_arquivo) as pdf_document:
+            pagina_pdf = pdf_document.load_page(pagina - 1)  # A contagem de páginas começa em 0
+            
+            # Converter a página PDF em uma imagem
+            imagem = pagina_pdf.get_pixmap()
+            imagem_pil = Image.frombytes("RGB", [imagem.width, imagem.height], imagem.samples)
+
+            # Salvar a imagem em um buffer com qualidade ajustável
+            imagem_buffer = io.BytesIO()
+            imagem_pil.save(imagem_buffer, format='PNG', compress_level=9)  # Nível de compressão: 0 a 9
+            imagem_buffer.seek(0)
+
+            # Retorna a imagem
+            return send_file(
+                imagem_buffer,
+                mimetype='image/png',
+                as_attachment=True,
+                download_name=f'imagem_{pdf_id}_pagina_{pagina}.png'
+            )
+    else:
+        return "PDF não encontrado", 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) 
