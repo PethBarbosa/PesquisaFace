@@ -252,10 +252,18 @@ def obterPdf():
         return jsonify({'error': str(e)}), 500
     
 
-@app.route('/imagem/<importacaoId>', methods=['POST'])
+@app.route('/imagem/<importacaoId>', methods=['POST', 'OPTIONS'])
 @cross_origin()
 @jwt_required()
 def enviarImagem(importacaoId):
+    if request.method == 'OPTIONS':
+        # Responde à solicitação OPTIONS com os cabeçalhos CORS apropriados
+        response = jsonify({'message': 'Success'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'GET')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response
+    
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'Nenhum arquivo de imagem enviado'}), 400
@@ -263,10 +271,7 @@ def enviarImagem(importacaoId):
         file = request.files['file']
         imagem_processada = EncodeImage(file.read(), importacaoId)
 
-        response = jsonify(imagem_processada)
-        response.headers.add('Access-Control-Allow-Origin', 'https://pesquisafacebackredirect.online')
-
-        return response
+        return jsonify(imagem_processada)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
