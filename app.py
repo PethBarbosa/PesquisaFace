@@ -263,7 +263,10 @@ def enviarImagem(importacaoId):
         file = request.files['file']
         imagem_processada = EncodeImage(file.read(), importacaoId)
 
-        return jsonify(imagem_processada)
+        response = jsonify(imagem_processada)
+        response.headers.add('Access-Control-Allow-Origin', 'https://pesquisafacebackredirect.online')
+
+        return response
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
