@@ -93,6 +93,7 @@ def ProcessarPdf(pdfId):
 def EncodeImage(image, importacaoId):
 
     try:
+        print('Entrou no metodo EncodeImage')
         # Convertendo a imagem do PIL para um array NumPy
         image_array = np.array(Image.open(io.BytesIO(image)))
 
@@ -116,6 +117,7 @@ def EncodeImage(image, importacaoId):
         else:
             return {'success': False, 'message': 'Nenhuma correspondência encontrada', 'paginas_associadas': []}
     except Exception as e:
+        print(e)
         return {'success': False, 'message': f'Erro ao processar imagem: {str(e)}'}, 500
     
 ####################################################################

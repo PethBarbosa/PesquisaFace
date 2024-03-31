@@ -262,6 +262,7 @@ def enviarImagem(importacaoId):
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Access-Control-Allow-Methods', 'GET')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        print('Antes de retornar o Options')
         return response
     
     try:
@@ -269,6 +270,8 @@ def enviarImagem(importacaoId):
             return jsonify({'error': 'Nenhum arquivo de imagem enviado'}), 400
 
         file = request.files['file']
+        print('Recuperou o file:')
+        print(file)
         imagem_processada = EncodeImage(file.read(), importacaoId)
 
         return jsonify(imagem_processada)
